@@ -26,9 +26,10 @@ const EMAIL_CONFIG = {
   SUBJECT: 'Your LUMIRA \'26 Ticket'
 };
 
-// Attachment safety cap (base64 characters). Brevo accepts ~10 MB per
-// request, but keeping tickets light keeps delivery fast and reliable.
-const MAX_ATTACH_BASE64 = 280 * 1024; // ~= 210 KB binary
+// Attachment safety cap (base64 characters). Brevo accepts ~10 MB per request
+// (attachments up to ~7 MB), so this comfortably fits a full-quality 2x
+// ticket while still keeping submissions fast.
+const MAX_ATTACH_BASE64 = 5767168; // ~5.5 MB base64 (~4.1 MB binary)
 
 // Strips the "data:...;base64," prefix + whitespace → raw base64 body.
 function stripB64(dataUrl) {

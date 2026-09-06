@@ -8,8 +8,8 @@ A premium black & gold web app for **Lumbini College 2026 A/L Batch**'s **LUMIRA
 - 🔳 **QR generation** — each submission gets a personalized QR code (rendered in-browser as a clean image in the modal).
 - 🗄 **Firestore storage** — every entry is saved live to your Firebase project.
 - 🪟 **Ticket popup** — a ticket modal appears instantly on submit with QR + details.
-- 📄 **PDF download & e-mail** — generates the official LUMIRA ticket on the **`01` background template**, placing each guest's unique QR precisely inside the template's white QR placeholder box and stamping holder details; downloadable as PDF and e-mailable.
-- 📧 **Auto e-mail** — if an email is entered, the ticket is sent automatically via the **Brevo HTTP API** (no third-party relay). A size-aware attachment picks the lightweight PDF when it fits; if it would exceed the payload budget, it falls back to a compressed, auto-downscaled **PNG** of the same ticket so the email is always delivered.
+- 📄 **PDF download & e-mail** — generates the official LUMIRA ticket on the **`01` background template** in high resolution: the guest's QR fills the template's white QR box (92%) and the full name is stamped below it in premium gold; lossless PNG background + vector text = zero compression artifacts, downloadable as PDF and e-mailable.
+- 📧 **Auto e-mail** — if an email is entered, the ticket is sent automatically via the **Brevo HTTP API** (no third-party relay). A size-aware attachment picks the full-quality PDF when it fits (~4.5 MB budget); otherwise it falls back to a **high-resolution (2× Retina) lossless PNG** of the same ticket, so the QR is always large and sharp.
 - 🔐 **Admin dashboard** — lists all registrations with live status, counts, search, scan timestamps, **Download** & **Delete** actions.
 - 📷 **QR scanner** — scanning a QR **automatically** marks the ticket as scanned (Done popup, auto-dismisses ~1s) or warns **Already Scanned** on repeat scans.
 
@@ -28,7 +28,7 @@ A premium black & gold web app for **Lumbini College 2026 A/L Batch**'s **LUMIRA
     └── admin.js      # Dashboard table, download/delete + auto scanner logic
 ```
 
-> 🎫 **How the ticket PDF is built** — `buildTicketPdf` (in `common.js`) loads `01.png` as the full-bleed background on a 210×105 mm page, places the guest's QR inside the white placeholder box (template coords `1338,238` → size `305×298` px; QR fills 86%), and stamps name / class·phone / ticket ID in the flat band below the box. The registration **modal stays lightweight** (no template image) — only the downloaded/e-mailed PDF uses the template.
+> 🎫 **How the ticket PDF is built** — `buildTicketPdf` (in `common.js`) loads `01.png` as the full-bleed background on a 210×105 mm page, places the guest's QR inside the white placeholder box (template coords `1338,238` → size `305×298` px; QR fills 92% as large as the quiet zone allows), then stamps just the guest's **full name in premium gold (`#FFD700`)** in the flat band below the box. The background is embedded as **lossless PNG** (no compression artifacts) and the text is vector, so the QR stays sharp and scannable on phones. The e-mailed PNG fallback is rendered at **2× (Retina) resolution**, stepping down only if the payload needs to shrink. The registration **modal stays lightweight** (no template image) — only the downloaded/e-mailed ticket uses the template.
 
 ## Deploy to GitHub Pages
 

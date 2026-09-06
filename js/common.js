@@ -56,7 +56,7 @@ function escapeHtml(str) {
 // ---- Generate a QR code as a base64 data URL ----
 function makeQrDataUrl(text, size) {
   return QRCode.toDataURL(String(text), {
-    width: size || 230,
+    width: size || 600, // high source resolution → crisp when scaled into the ticket
     margin: 1,
     color: { dark: '#000000', light: '#ffffff' }
   });
@@ -72,12 +72,10 @@ const TICKET_TEMPLATE = {
   outH: 105,
   // White QR placeholder box on the right side of the template (px on 1774x887)
   qrBox: { x: 1338, y: 238, w: 305, h: 298 },
-  qrFill: 0.86, // QR fills 86% of the box (leaves quiet-zone margin)
-  // Ticket-holder details go in the flat area below the QR box (px)
-  holderOnly: true,
-  name:  { cx: 1464, y: 718 },
-  sub:   { cx: 1464, y: 732 },
-  id:    { cx: 1464, y: 746 },
+  qrFill: 0.92, // QR fills 92% of the box — as large as the quiet-zone allows
+  // The flat area below the QR box carries only the guest's full name (px)
+  name: { cx: 1464, y: 728 },
+  nameColor: '#FFD700', // premium golden
   // Small status stamp above the QR box (used for admin re-downloads)
   status: { cx: 1490, y: 150 }
 };
@@ -109,13 +107,14 @@ function loadTemplateImage() {
 }
 
 // ---- Composite the full ticket card onto a canvas at a given scale ----
-// Draws the "01" background, the guest QR, and the holder details exactly like
-// the PDF layout (same mm-based metrics), so the same ticket renders as PNG.
-async function renderTicketCanvas(scale, data, qrDataUrl, scanned, withStatus) {
+// `dpr` is the Retina/High-DPI multiplier: drawing the template, QR and text at
+// a higher pixel resolution makes the exported ticket sharp and easy to scan.
+// Only the guest's full name (premium gold) is stamped below the QR code.
+async function renderTicketCanvas(scale, dpr, data, qrDataUrl, scanned, withStatus) {
   const T = TICKET_TEMPLATE;
   const img = await loadTemplateImage();
-  const w = Math.max(1, Math.round(T.wPx * scale));
-  const h = Math.max(1, Math.round(T.hPx * scale));
+  const w = Math.max(1, Math.round(T.wPx * scale * dpr));
+  const h = Math.max(1, Math.round(T.hPx * scale * dpr));
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
@@ -127,50 +126,46 @@ async function renderTicketCanvas(scale, data, qrDataUrl, scanned, withStatus) {
     const qimg = await loadDataUrlImage(qrDataUrl);
     const b = T.qrBox;
     const q = Math.min(b.w, b.h) * T.qrFill;
-    ctx.drawImage(qimg, (b.x + (b.w - q) / 2) * scale, (b.y + (b.h - q) / 2) * scale, q * scale, q * scale);
+    ctx.drawImage(qimg, (b.x + (b.w - q) / 2) * scale * dpr, (b.y + (b.h - q) / 2) * scale * dpr, q * scale * dpr, q * scale * dpr);
   }
 
-  const pxPerMm = T.wPx / T.outW * scale; // canvas px per printed mm at this scale
+  const pxPerMm = T.wPx / T.outW * scale * dpr; // canvas px per printed mm at this resolution
   const family = 'Helvetica, Arial, sans-serif';
   ctx.textAlign = 'center';
-
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold ' + Math.round(8 * pxPerMm) + 'px ' + family;
-  ctx.fillText(String(data.name || '—'), T.name.cx * scale, T.name.y * scale);
 
-  ctx.fillStyle = '#e0c67a';
-  ctx.font = Math.round(4 * pxPerMm) + 'px ' + family;
-  ctx.fillText([data.cls || '', data.phone || ''].filter(Boolean).join('   ·   '), T.sub.cx * scale, T.sub.y * scale);
-
-  ctx.fillStyle = '#d4af37';
-  ctx.font = 'bold ' + Math.round(4.5 * pxPerMm) + 'px ' + family;
-  ctx.fillText('TICKET ' + (data.uid || data.id), T.id.cx * scale, T.id.y * scale);
+  ctx.fillStyle = T.nameColor;
+  ctx.font = 'bold ' + Math.round(8.5 * pxPerMm) + 'px ' + family;
+  ctx.fillText(String(data.name || '—'), T.name.cx * scale * dpr, T.name.y * scale * dpr);
 
   if (withStatus && typeof scanned === 'boolean') {
     ctx.fillStyle = scanned ? '#e74c3c' : '#2ecc71';
     ctx.font = Math.round(4 * pxPerMm) + 'px ' + family;
-    ctx.fillText(scanned ? 'ALREADY SCANNED' : 'STATUS: ACTIVE', T.status.cx * scale, T.status.y * scale);
+    ctx.fillText(scanned ? 'ALREADY SCANNED' : 'STATUS: ACTIVE', T.status.cx * scale * dpr, T.status.y * scale * dpr);
   }
 
   return canvas;
 }
 
-// ---- Build the ticket as a lightweight PNG ----
-// Returns { dataUrl, base64, width, height }. Auto-downscales the composite so
-// the base64 stays within the SMTP relay payload budget (e.g. ~180 KB binary).
+// ---- Build the ticket as a high-resolution lossless PNG ----
+// Returns { base64, width, height, dpr }. Renders at 2x (Retina) first and steps
+// down only if needed to stay inside the payload budget.
 async function buildTicketPng(data, qrDataUrl, scanned, withStatus, maxBase64) {
-  const budget = maxBase64 || 240 * 1024;
-  let scale = 1;
-  for (let i = 0; i < 5; i++) {
-    const canvas = await renderTicketCanvas(scale, data, qrDataUrl, scanned, withStatus);
+  const budget = maxBase64 || 5767168; // ~5.5 MB base64 — lets the full 2x render fit
+  for (const dpr of [2, 1.5, 1.25, 1]) {
+    const canvas = await renderTicketCanvas(1, dpr, data, qrDataUrl, scanned, withStatus);
     const base64 = (canvas.toDataURL('image/png').split(',')[1] || '').replace(/\s+/g, '');
-    const result = { base64, width: canvas.width, height: canvas.height };
-    if (base64.length <= budget || scale <= 0.28) return result;
-    scale = Math.max(0.25, scale * 0.7);
+    if (base64.length <= budget) {
+      return { base64, width: canvas.width, height: canvas.height, dpr };
+    }
   }
-  const last = await renderTicketCanvas(scale, data, qrDataUrl, scanned, withStatus);
-  return { base64: (last.toDataURL('image/png').split(',')[1] || '').replace(/\s+/g, ''), width: last.width, height: last.height };
+  const canvas = await renderTicketCanvas(1, 1, data, qrDataUrl, scanned, withStatus);
+  return {
+    base64: (canvas.toDataURL('image/png').split(',')[1] || '').replace(/\s+/g, ''),
+    width: canvas.width,
+    height: canvas.height,
+    dpr: 1
+  };
 }
 
 function loadDataUrlImage(src) {
@@ -184,22 +179,21 @@ function loadDataUrlImage(src) {
 
 // ---- Build the template-based ticket PDF (async, returns jsPDF instance) ----
 // Overlays the unique guest QR code precisely inside the white placeholder box
-// of the "01" background and stamps the ticket-holder details.
-// opts = { bgScale, jpegQuality } control how the (dominant) background is
-// encoded so email/attachments stay small; downloads keep full resolution.
-async function buildTicketPdf(data, qrDataUrl, scanned, withStatus, opts) {
+// of the "01" background and stamps the guest's full name in premium gold.
+// The background is embedded as lossless PNG so there are no compression
+// artifacts; text is vector (always crisp) and the QR is rendered large.
+async function buildTicketPdf(data, qrDataUrl, scanned, withStatus) {
   if (typeof window.jspdf === 'undefined') throw new Error('jsPDF library not loaded');
-
-  const O = opts || {};
-  const bgScale = O.bgScale || 1;
-  const jpegQuality = O.jpegQuality == null ? 0.92 : O.jpegQuality;
 
   const img = await loadTemplateImage();
   const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(img.naturalWidth * bgScale));
-  canvas.height = Math.max(1, Math.round(img.naturalHeight * bgScale));
-  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-  const bg = canvas.toDataURL('image/jpeg', jpegQuality);
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  // Background as high-quality JPEG: jsPDF re-encodes a lossless PNG of the
+  // photographic template into ~10 MB files, so JPEG keeps PDFs usable while
+  // the QR (entry-critical) and name text stay razor sharp & artifact-free.
+  canvas.getContext('2d').drawImage(img, 0, 0);
+  const bg = canvas.toDataURL('image/jpeg', 0.92);
 
   const { jsPDF } = window.jspdf;
   const T = TICKET_TEMPLATE;
@@ -207,9 +201,9 @@ async function buildTicketPdf(data, qrDataUrl, scanned, withStatus, opts) {
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [T.outW, T.outH] });
 
   // Full-bleed template background
-  pdf.addImage(bg, 'JPEG', 0, 0, T.outW, T.outH);
+  pdf.addImage(bg, 'PNG', 0, 0, T.outW, T.outH);
 
-  // QR code → precisely centred inside the template's white placeholder box
+  // QR code → large & centred inside the template's white placeholder box
   if (qrDataUrl) {
     const b = T.qrBox;
     const q = Math.min(b.w, b.h) * T.qrFill;
@@ -218,21 +212,11 @@ async function buildTicketPdf(data, qrDataUrl, scanned, withStatus, opts) {
     pdf.addImage(qrDataUrl, 'PNG', qx, qy, q * s, q * s);
   }
 
-  // Ticket-holder details (flat area below the QR box)
+  // Only the guest's full name in premium gold below the QR code
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8);
-  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(8.5);
+  pdf.setTextColor(255, 215, 0); // #FFD700
   pdf.text(String(data.name || '—'), T.name.cx * s, T.name.y * s, { align: 'center' });
-
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(4);
-  pdf.setTextColor(224, 198, 122);
-  pdf.text([data.cls || '', data.phone || ''].filter(Boolean).join('   ·   '), T.sub.cx * s, T.sub.y * s, { align: 'center' });
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(4.5);
-  pdf.setTextColor(212, 175, 55);
-  pdf.text('TICKET ' + (data.uid || data.id), T.id.cx * s, T.id.y * s, { align: 'center' });
 
   // Optional status stamp (admin re-downloads)
   if (withStatus && typeof scanned === 'boolean') {

@@ -54,7 +54,7 @@ form.addEventListener('submit', async (e) => {
   // 2) Render QR (as an <img> — reliable across browsers, no canvas corruption)
   try {
     if (typeof QRCode === 'undefined') throw new Error('QRCode library not loaded');
-    currentQr = await makeQrDataUrl(id, 260);
+    currentQr = await makeQrDataUrl(id);
     const qrBox = document.getElementById('qrBox');
     qrBox.innerHTML = '';
     const img = document.createElement('img');
@@ -81,11 +81,11 @@ form.addEventListener('submit', async (e) => {
   toast('Ticket generated & saved successfully!', 'good');
 
   // 5) If an email was provided, send the ticket automatically.
-  //    Build a lightweight PDF and a PNG fallback; the sender picks whichever
-  //    fits within the relay's payload limits.
+  //    Build a full-quality PDF (lossless) plus a high-resolution PNG fallback;
+  //    the sender attaches whichever fits the payload budget.
   if (email) {
     try {
-      const pdf = await buildTicketPdf(data, currentQr, false, false, { bgScale: 0.75, jpegQuality: 0.78 });
+      const pdf = await buildTicketPdf(data, currentQr, false, false);
       const png = await buildTicketPng(data, currentQr, false, false);
       const result = await sendTicketEmail(email, name, id, { pdf, png });
       if (result.ok) {

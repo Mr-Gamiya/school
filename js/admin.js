@@ -81,7 +81,7 @@ window.downloadTicket = async function (id) {
     const doc = await db.collection(COLLECTION).doc(id).get();
     if (!doc.exists) { toast('Ticket not found.', 'bad'); return; }
     const data = { id: doc.id, ...doc.data() };
-    const qrDataUrl = await makeQrDataUrl(id, 260);
+    const qrDataUrl = await makeQrDataUrl(id);
     const pdf = await buildTicketPdf(data, qrDataUrl, !!data.scanned, true);
     pdf.save((data.uid || id) + '.pdf');
     toast('Ticket PDF downloaded.', 'good');
