@@ -35,12 +35,11 @@ function initParticles(container) {
   }
 }
 
-// ---- Unique ticket ID generator ----
+// ---- Unique numeric ticket ID generator ----
 function uid() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let s = '';
-  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return 'LUM' + s + '-' + Date.now().toString(36).toUpperCase().slice(-4);
+  const t = Date.now().toString().slice(-8);
+  const r = String(Math.floor(100 + Math.random() * 900));
+  return t + r;
 }
 
 // ---- Status label helpers ----

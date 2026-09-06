@@ -165,6 +165,17 @@ a { color: var(--gold); text-decoration: none; }
 .btn.outline:hover { background: rgba(212,175,55,0.1); }
 .btn.small { padding: 8px 14px; font-size: 0.82rem; }
 .btn.block { width: 100%; }
+.btn.danger {
+  background: transparent;
+  color: var(--red);
+  border: 1px solid rgba(231,76,60,0.5);
+  box-shadow: none;
+}
+.btn.danger:hover {
+  background: rgba(231,76,60,0.12);
+  box-shadow: none;
+  filter: none;
+}
 
 /* ---------- Forms ---------- */
 .field { margin-bottom: 18px; }
@@ -393,6 +404,18 @@ table.table { width: 100%; border-collapse: collapse; min-width: 720px; }
 #scannerBox { width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: #000; }
 #scannerBox video { width: 100%; display: block; }
 #scanResult { margin-top: 16px; }
+
+/* ---------- Ticket popup modal ---------- */
+.modal.ticket-modal { width: 520px; text-align: center; }
+.modal.ticket-modal .ticket { margin: 18px auto 0; width: 100%; }
+.modal.ticket-modal .dim { margin-top: 4px; }
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 640px) {

@@ -26,15 +26,9 @@
       <p class="sub">Fill in your details to generate a personalized VIP ticket with a scannable QR code.</p>
 
       <form id="regForm">
-        <div class="row2">
-          <div class="field">
-            <label>Full Name *</label>
-            <input type="text" id="fName" placeholder="e.g. Pahan Perera" required />
-          </div>
-          <div class="field">
-            <label>Email</label>
-            <input type="email" id="fEmail" placeholder="you@example.com" />
-          </div>
+        <div class="field">
+          <label>Full Name *</label>
+          <input type="text" id="fName" placeholder="e.g. Pahan Perera" required />
         </div>
         <div class="row2">
           <div class="field">
@@ -42,7 +36,7 @@
             <input type="text" id="fClass" placeholder="e.g. 12 Science B" />
           </div>
           <div class="field">
-            <label>Phone</label>
+            <label>Phone Number</label>
             <input type="tel" id="fPhone" placeholder="+94 7X XXX XXXX" />
           </div>
         </div>
@@ -50,43 +44,47 @@
           <label>Additional Notes</label>
           <textarea id="fNotes" rows="2" placeholder="Anything else (optional)"></textarea>
         </div>
-        <button type="submit" class="btn block" id="submitBtn">Generate My VIP Ticket ✦</button>
+        <button type="submit" class="btn block" id="submitBtn">Generate My Ticket ✦</button>
       </form>
     </section>
+  </div>
 
-    <section id="resultArea" style="display:none">
-      <div class="ticket-wrap">
-        <div id="ticketCard" class="ticket">
-          <div class="ticket-head">
-            <div class="ticket-brand">LUMIRA <em>'26</em>
-              <small>VIP PASS · SCAN TO ENTER</small>
-            </div>
-            <div class="ticket-type">VIP</div>
+  <!-- Ticket popup modal -->
+  <div class="modal-ov" id="ticketModal">
+    <div class="modal ticket-modal">
+      <button class="close" id="closeTicketModal">✕</button>
+      <h3>Your VIP Ticket</h3>
+      <p class="dim" style="font-size:.85rem">Download it and present at the entrance for scanning.</p>
+
+      <div class="ticket" id="ticketCard">
+        <div class="ticket-head">
+          <div class="ticket-brand">LUMIRA <em>'26</em>
+            <small>VIP PASS · SCAN TO ENTER</small>
           </div>
-          <div class="ticket-body">
-            <div class="qr" id="qrBox"></div>
-            <div class="ticket-detail">
-              <div class="tgline"><div class="k">Name</div><div class="v" id="tName">—</div></div>
-              <div class="tgline"><div class="k">Class</div><div class="v" id="tClass">—</div></div>
-              <div class="tgline"><div class="k">Ticket ID</div>
-                <span class="ticket-id" id="tId">—</span>
-              </div>
-              <div class="tgline">
-                <span class="status-chip status-active">Active</span>
-              </div>
+          <div class="ticket-type">VIP</div>
+        </div>
+        <div class="ticket-body">
+          <div class="qr" id="qrBox"></div>
+          <div class="ticket-detail">
+            <div class="tgline"><div class="k">Name</div><div class="v" id="tName">—</div></div>
+            <div class="tgline"><div class="k">Class</div><div class="v" id="tClass">—</div></div>
+            <div class="tgline"><div class="k">Phone</div><div class="v" id="tPhone">—</div></div>
+            <div class="tgline"><div class="k">Ticket ID</div>
+              <span class="ticket-id" id="tId">—</span>
             </div>
-          </div>
-          <div class="ticket-foot">
-            <span>LUMIRA '26</span>
-            <span id="tDate">—</span>
           </div>
         </div>
-        <div style="margin-top:20px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap">
-          <button class="btn" id="downloadPdfBtn">Download Ticket (PDF)</button>
-          <button class="btn outline" id="newBtn">New Registration</button>
+        <div class="ticket-foot">
+          <span>LUMIRA '26</span>
+          <span id="tDate">—</span>
         </div>
       </div>
-    </section>
+
+      <div class="modal-actions">
+        <button class="btn" id="downloadPdfBtn">Download Ticket (PDF)</button>
+        <button class="btn outline" id="downloadQrBtn">Download QR (PNG)</button>
+      </div>
+    </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>

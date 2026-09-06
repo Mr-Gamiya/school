@@ -30,7 +30,7 @@ function render() {
   const filtered = allDocs.filter((d) => {
     if (!searchTerm) return true;
     const q = searchTerm.toLowerCase();
-    return [d.name, d.uid, d.cls, d.email, d.phone, d.id]
+    return [d.name, d.uid, d.cls, d.phone, d.id]
       .some((v) => v && String(v).toLowerCase().includes(q));
   });
 
@@ -57,11 +57,10 @@ function render() {
       <td><code>${escapeHtml(d.uid || d.id)}</code></td>
       <td>${escapeHtml(d.name || '—')}</td>
       <td>${escapeHtml(d.cls || '—')}</td>
-      <td style="font-size:.8rem">${escapeHtml(d.email || '—')}<br/>${escapeHtml(d.phone || '')}</td>
       <td><span class="status-chip ${statusClass(d.scanned)}">${statusText(d.scanned)}</span></td>
       <td style="font-size:.8rem; color:var(--text-dim)">${when}</td>
       <td>
-        <button class="btn small outline" onclick="resetStatus('${d.id}')">Reset</button>
+        <button class="btn small danger" onclick="deleteTicket('${escapeHtml(d.id)}')">Delete</button>
       </td>
     </tr>`;
   }).join('');
@@ -80,14 +79,16 @@ function fmtTime(ts) {
   return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-// Reset a ticket back to Active
-window.resetStatus = async function (id) {
+// ---- Delete a ticket ----
+window.deleteTicket = async function (id) {
+  const ok = confirm('Delete ticket ' + id + '?\nThis cannot be undone.');
+  if (!ok) return;
   try {
-    await db.collection(COLLECTION).doc(id).update({ scanned: false, scannedAt: null });
-    toast('Status reset to Active.', 'good');
+    await db.collection(COLLECTION).doc(id).delete();
+    toast('Ticket deleted.', 'good');
   } catch (e) {
     console.error(e);
-    toast('Failed to reset.', 'bad');
+    toast('Failed to delete ticket.', 'bad');
   }
 };
 
@@ -95,26 +96,6 @@ window.resetStatus = async function (id) {
 document.getElementById('searchInput').addEventListener('input', (e) => {
   searchTerm = e.target.value.trim();
   render();
-});
-
-// ---------- Export CSV ----------
-document.getElementById('exportBtn').addEventListener('click', () => {
-  if (allDocs.length === 0) { toast('Nothing to export', 'bad'); return; }
-  const header = 'Ticket ID,Name,Class,Email,Phone,Status,Scanned At,Created At';
-  const rows = allDocs.map((d) => [
-    d.uid || d.id, d.name, d.cls, d.email, d.phone,
-    d.scanned ? 'Scanned' : 'Active',
-    d.scannedAt ? new Date(d.scannedAt).toLocaleString() : '',
-    d.createdAt ? new Date(d.createdAt).toLocaleString() : ''
-  ].map((v) => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(','));
-  const csv = header + '\n' + rows.join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'lumira26-registrations.csv';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast('CSV exported.', 'good');
 });
 
 // ---------- Scanner ----------
@@ -192,11 +173,12 @@ async function validateTicket(value) {
       return;
     }
     const data = doc.data();
+    const status = data.scanned ? 'Already Scanned' : 'Active';
     res.innerHTML = `<div class="card" style="padding:18px; text-align:center; border-color:${data.scanned ? 'rgba(231,76,60,.5)' : 'rgba(46,204,113,.5)'}; background:rgba(24,24,24,.6)">
       <h3 style="margin-bottom:4px; color:#fff">${escapeHtml(data.name || '—')}</h3>
       <p class="dim" style="font-size:.85rem">${escapeHtml(data.cls || '')}</p>
       <p style="margin:10px 0"><code style="color:var(--gold)">${escapeHtml(data.uid || value)}</code></p>
-      <span class="status-chip ${statusClass(data.scanned)}">${statusText(data.scanned)}</span>
+      <span class="status-chip ${statusClass(data.scanned)}">${status}</span>
       <div style="margin-top:14px">
         <button class="btn small" id="markScannedBtn" ${data.scanned ? 'disabled' : ''}>Mark as Scanned</button>
         <button class="btn small outline" onclick="closeScanner()">Done</button>
@@ -210,6 +192,7 @@ async function validateTicket(value) {
           if (data.scanned) return;
           await db.collection(COLLECTION).doc(value).update({
             scanned: true,
+            // Record the scan timestamp
             scannedAt: new Date().toISOString()
           });
           toast('Entry validated & marked scanned!', 'good');
@@ -228,8 +211,3 @@ async function validateTicket(value) {
     res.innerHTML = '<p class="dim" style="text-align:center">Could not validate. Check Firestore rules.</p>';
   }
 }
-
-// Resume camera after validation result shown
-document.getElementById('scanResult').addEventListener('click', (e) => {
-  if (e.target.id === 'markScannedBtn') return;
-});

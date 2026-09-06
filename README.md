@@ -4,25 +4,25 @@ A premium black & gold web app for **Lumbini College 2026 A/L Batch**'s **LUMIRA
 
 ## Features
 
-- 🎟 **Registration form** — inputs Name, Class, Email, Phone, Notes; auto-generates a unique Ticket ID.
+- 🎟 **Registration form** — inputs Name, Class, Phone & Notes; auto-generates a unique numeric Ticket ID.
 - 🔳 **QR generation** — each submission gets a personalized QR code (rendered in-browser, no server needed).
 - 🗄 **Firestore storage** — every entry is saved live to your Firebase project.
-- 👀 **Ticket preview** — a styled VIP ticket card on the home page.
-- 📄 **PDF download** — export the ticket as a branded PDF.
-- 🔐 **Admin dashboard** — lists all registrations with live status, counts, search, CSV export.
-- 📷 **QR scanner** — real-time camera scanning that validates & marks tickets as *Scanned* / *Active*.
+- 🪟 **Ticket popup** — a VIP ticket modal appears instantly on submit with QR + details.
+- 📄 **Download** — export the full ticket as a branded PDF (or just the QR as PNG).
+- 🔐 **Admin dashboard** — lists all registrations with live status, counts, search, scan timestamps & delete.
+- 📷 **QR scanner** — real-time camera scanning that validates & marks tickets as *Active* / *Already Scanned*.
 
 ## Project structure
 
 ```
-├── index.html        # Registration + ticket preview
+├── index.html        # Registration form + ticket popup modal
 ├── admin.html        # Dashboard + scanner
 ├── css/style.css     # Black & gold premium theme
 └── js/
     ├── config.js     # Firebase config
-    ├── common.js     # Shared helpers (toasts, particles, uid)
+    ├── common.js     # Shared helpers (toasts, particles, numeric uid)
     ├── register.js   # Registration + QR + PDF logic
-    └── admin.js      # Dashboard table + scanner logic
+    └── admin.js      # Dashboard table, delete + scanner logic
 ```
 
 ## Deploy to GitHub Pages
@@ -56,4 +56,4 @@ service cloud.firestore {
 ## Usage
 
 - **Guests** visit `index.html`, submit the form, and download/hold their VIP ticket PDF.
-- **Admins** visit `admin.html`, use **Scan QR Code** (camera) or paste a Ticket ID, and mark entry as scanned.
+- **Admins** visit `admin.html`, use **Scan QR Code** (camera) or paste a Ticket ID, mark entry as scanned, or delete entries.

@@ -4,6 +4,7 @@
 
 initParticles('particles');
 
+let qrCanvas = null;
 let currentTicket = null;
 
 const form = document.getElementById('regForm');
@@ -12,12 +13,11 @@ const submitBtn = document.getElementById('submitBtn');
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = document.getElementById('fName').value.trim();
-  const email = document.getElementById('fEmail').value.trim();
   const cls = document.getElementById('fClass').value.trim();
   const phone = document.getElementById('fPhone').value.trim();
   const notes = document.getElementById('fNotes').value.trim();
 
-  if (!name) { toast('Please enter your name', 'bad'); return; }
+  if (!name) { toast('Please enter your full name', 'bad'); return; }
 
   submitBtn.disabled = true;
   submitBtn.textContent = 'Generating…';
@@ -27,7 +27,6 @@ form.addEventListener('submit', async (e) => {
   const data = {
     uid: id,
     name,
-    email,
     cls,
     phone,
     notes,
@@ -43,24 +42,24 @@ form.addEventListener('submit', async (e) => {
     // Render QR code
     const qrBox = document.getElementById('qrBox');
     qrBox.innerHTML = '';
-    await QRCode.toCanvas(document.createElement('canvas'), id, {
-      width: 200,
+    qrCanvas = await QRCode.toCanvas(document.createElement('canvas'), id, {
+      width: 240,
       margin: 1,
       color: { dark: '#000000', light: '#ffffff' }
-    }).then((canvas) => {
-      qrBox.appendChild(canvas);
     });
+    qrBox.appendChild(qrCanvas);
 
     // Fill ticket details
     document.getElementById('tName').textContent = name || '—';
     document.getElementById('tClass').textContent = cls || '—';
+    document.getElementById('tPhone').textContent = phone || '—';
     document.getElementById('tId').textContent = id;
     document.getElementById('tDate').textContent = new Date().toLocaleDateString('en-GB', {
       day: '2-digit', month: 'short', year: 'numeric'
     });
 
-    document.getElementById('resultArea').style.display = 'block';
-    document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
+    // Pop up the ticket modal
+    document.getElementById('ticketModal').classList.add('open');
     form.reset();
     toast('Ticket generated & saved successfully!', 'good');
   } catch (err) {
@@ -68,23 +67,32 @@ form.addEventListener('submit', async (e) => {
     toast('Failed to save. Check your network / Firestore rules.', 'bad');
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Generate My VIP Ticket ✦';
+    submitBtn.textContent = 'Generate My Ticket ✦';
   }
 });
 
-document.getElementById('newBtn').addEventListener('click', () => {
-  document.getElementById('resultArea').style.display = 'none';
-  document.getElementById('fName').focus();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+// ---- Ticket modal close ----
+function closeTicketModal() {
+  document.getElementById('ticketModal').classList.remove('open');
+}
+document.getElementById('closeTicketModal').addEventListener('click', closeTicketModal);
+document.getElementById('ticketModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeTicketModal();
 });
 
 // ---- Download ticket as PDF ----
 document.getElementById('downloadPdfBtn').addEventListener('click', () => {
   if (!currentTicket) return;
-  const ticket = document.getElementById('ticketCard');
+  htmlToPdf(document.getElementById('ticketCard'), currentTicket);
+});
 
-  // Build a high-quality ticket image via canvas for the PDF
-  htmlToPdf(ticket, currentTicket);
+// ---- Download QR code as PNG ----
+document.getElementById('downloadQrBtn').addEventListener('click', () => {
+  if (!qrCanvas) return;
+  const a = document.createElement('a');
+  a.href = qrCanvas.toDataURL('image/png');
+  a.download = (currentTicket ? currentTicket.uid : 'ticket') + '.png';
+  a.click();
 });
 
 function htmlToPdf(ticketEl, data) {
@@ -138,8 +146,7 @@ function htmlToPdf(ticketEl, data) {
   pdf.setFontSize(11);
   pdf.setTextColor(255, 255, 255);
   pdf.text('Class / Stream:  ' + (data.cls || '—'), 22, 110);
-  pdf.text('Email:  ' + (data.email || '—'), 22, 117);
-  pdf.text('Phone:  ' + (data.phone || '—'), 22, 124);
+  pdf.text('Phone:  ' + (data.phone || '—'), 22, 117);
 
   // QR code as graphic
   const qrCanvas = ticketEl.querySelector('canvas');
