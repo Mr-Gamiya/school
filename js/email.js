@@ -12,7 +12,7 @@ const EMAIL_CONFIG = {
   ENABLED: true,
   API_KEY: 'YOUR_BREVO_API_KEY',                 // <-- paste your key here
   SENDER: { name: 'LUMIRA \'26', email: 'your-verified-sender@example.com' },
-  SUBJECT: 'Your LUMIRA \'26 VIP Ticket',
+  SUBJECT: 'Your LUMIRA \'26 Ticket',
   FROM_NAME: 'LUMIRA \'26'
 };
 
@@ -35,9 +35,9 @@ async function sendTicketEmail(recipient, name, ticketId, pdfInstance) {
     htmlContent:
       '<div style="font-family:Arial,Helvetica,sans-serif;background:#0a0a0a;color:#f5efe0;padding:24px;border-radius:12px">' +
         '<h2 style="color:#d4af37;letter-spacing:2px;margin:0 0 6px">LUMIRA &#39;26</h2>' +
-        '<p style="color:#a89f8a;margin:0 0 18px;font-size:13px">VIP PASS &middot; Lumbini College 2026 A/L Batch</p>' +
+        '<p style="color:#a89f8a;margin:0 0 18px;font-size:13px">ENTRY PASS &middot; Lumbini College 2026 A/L Batch</p>' +
         '<p style="margin:0 0 12px">Hi ' + escapeHtml(name || '') + ',</p>' +
-        '<p style="margin:0 0 12px">Your LUMIRA &#39;26 VIP ticket is attached as a PDF. ' +
+        '<p style="margin:0 0 12px">Your LUMIRA &#39;26 ticket is attached as a PDF. ' +
           'Present the QR code at the entrance for scanning.</p>' +
         '<p style="color:#a89f8a;font-size:13px;margin:0">Ticket ID: <strong style="color:#d4af37">' + escapeHtml(ticketId) + '</strong></p>' +
       '</div>',

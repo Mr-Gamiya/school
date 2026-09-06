@@ -62,7 +62,7 @@ function makeQrDataUrl(text, size) {
   });
 }
 
-// ---- Build the branded VIP ticket PDF (returns jsPDF instance) ----
+// ---- Build the branded ticket PDF (returns jsPDF instance) ----
 function buildTicketPdf(data, qrDataUrl, scanned) {
   if (typeof window.jspdf === 'undefined') throw new Error('jsPDF library not loaded');
   const { jsPDF } = window.jspdf;
@@ -90,7 +90,7 @@ function buildTicketPdf(data, qrDataUrl, scanned) {
   pdf.text('LUMIRA', 105, 40, { align: 'center' });
   pdf.setFontSize(18);
   pdf.setTextColor(240, 212, 122);
-  pdf.text('\'26 — VIP PASS', 105, 48, { align: 'center' });
+  pdf.text('\'26 — ENTRY PASS', 105, 48, { align: 'center' });
 
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');

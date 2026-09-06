@@ -1,4 +1,4 @@
-# LUMIRA '26 — VIP Ticket & Scanner App
+# LUMIRA '26 — Ticket & Scanner App
 
 A premium black & gold web app for **Lumbini College 2026 A/L Batch**'s **LUMIRA '26** event. Built with plain HTML/CSS/JS + **Firebase Firestore**, deployable to **GitHub Pages**.
 
@@ -7,7 +7,7 @@ A premium black & gold web app for **Lumbini College 2026 A/L Batch**'s **LUMIRA
 - 🎟 **Registration form** — inputs Name, Class, Phone, Additional Notes & optional Email; auto-generates a unique numeric Ticket ID.
 - 🔳 **QR generation** — each submission gets a personalized QR code (rendered in-browser as a clean image in the modal).
 - 🗄 **Firestore storage** — every entry is saved live to your Firebase project.
-- 🪟 **Ticket popup** — a VIP ticket modal appears instantly on submit with QR + details.
+- 🪟 **Ticket popup** — a ticket modal appears instantly on submit with QR + details.
 - 📄 **PDF download** — the ticket/QR is downloadable strictly as a branded PDF.
 - 📧 **Auto e-mail** — if an email is entered, the ticket PDF is sent automatically via **Brevo (Sendinblue) SMTP API**.
 - 🔐 **Admin dashboard** — lists all registrations with live status, counts, search, scan timestamps, **Download** & **Delete** actions.
@@ -66,7 +66,7 @@ service cloud.firestore {
 
 ## Usage
 
-- **Guests** visit `index.html`, submit the form, and download/hold their VIP ticket PDF (optionally gets it e-mailed).
+- **Guests** visit `index.html`, submit the form, and download/hold their ticket PDF (optionally gets it e-mailed).
 - **Admins** visit `admin.html`, use **Scan QR Code** (camera) or paste a Ticket ID. Scans are **automatic**:
   - First scan → ticket marked scanned + timestamp recorded, quick **Done** popup (~1s).
   - Re-scan → **Already Scanned** warning popup.
