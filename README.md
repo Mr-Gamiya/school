@@ -9,7 +9,7 @@ A premium black & gold web app for **Lumbini College 2026 A/L Batch**'s **LUMIRA
 - 🗄 **Firestore storage** — every entry is saved live to your Firebase project.
 - 🪟 **Ticket popup** — a ticket modal appears instantly on submit with QR + details.
 - 📄 **PDF download & e-mail** — generates the official LUMIRA ticket on the **`01` background template**, placing each guest's unique QR precisely inside the template's white QR placeholder box and stamping holder details; downloadable as PDF and e-mailable.
-- 📧 **Auto e-mail** — if an email is entered, the ticket is sent automatically via the **Brevo SMTP relay** (SMTP.js). A size-aware attachment picks the lightweight PDF when it fits; if it would exceed the relay's payload budget, it falls back to a compressed, auto-downscaled **PNG** of the same ticket so the email is always delivered.
+- 📧 **Auto e-mail** — if an email is entered, the ticket is sent automatically via the **Brevo HTTP API** (no third-party relay). A size-aware attachment picks the lightweight PDF when it fits; if it would exceed the payload budget, it falls back to a compressed, auto-downscaled **PNG** of the same ticket so the email is always delivered.
 - 🔐 **Admin dashboard** — lists all registrations with live status, counts, search, scan timestamps, **Download** & **Delete** actions.
 - 📷 **QR scanner** — scanning a QR **automatically** marks the ticket as scanned (Done popup, auto-dismisses ~1s) or warns **Already Scanned** on repeat scans.
 
@@ -58,17 +58,17 @@ service cloud.firestore {
 
 > ⚠️ For a production event, tighten these rules and add authentication (e.g., only admins may read/scan).
 
-## Automated e-mail (Brevo SMTP relay)
+## Automated e-mail (Brevo HTTP API)
 
-The app sends emails through [SMTP.js](https://smtpjs.com), which relays to your **Brevo SMTP** server (`smtp-relay.brevo.com:587`). Your SMTP login + SMTP key are already filled in (`js/email.js` → `EMAIL_CONFIG`).
+The app sends emails straight from the browser to **api.brevo.com/v3/smtp/email** using a Brevo **Transactional API key** (`xkeysib-…`). No third-party SMTP relay is needed — Brevo allows CORS for GitHub Pages origins.
 
 1. Create a free account at **https://brevo.com**.
-2. Verify your **sender identity** (Settings → Senders & IPs).
-3. Paste the verified sender email into `js/email.js` → `EMAIL_CONFIG.SENDER.email`.
+2. Verify your **sender identity** (Settings → Senders & IPs) and put that address into `js/email.js` → `EMAIL_CONFIG.SENDER.email`.
+3. Create an **API key** (Settings → SMTP & API → API keys → "Create a key") and paste it into `js/email.js` → `EMAIL_CONFIG.API_KEY`.
 4. Done — when a visitor enters an email, the ticket is attached and sent automatically (PDF preferred; auto-PNG fallback if the payload would be too heavy).
 
 > ⚠️ Credentials in client-side JS are visible to anyone who inspects the page — inherent to a serverless GitHub Pages app. Don't reuse a key you can't rotate; tighten as needed for a production event.
-> If the sender email is missing, the app still works — it just skips the e-mail and shows a notice.
+> If the API key is missing, the app still works — it just skips the e-mail and shows a notice.
 
 ## Usage
 
