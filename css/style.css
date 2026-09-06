@@ -407,7 +407,7 @@ table.table { width: 100%; border-collapse: collapse; min-width: 720px; }
 
 /* ---------- Ticket popup modal ---------- */
 .modal.ticket-modal { width: 520px; text-align: center; }
-.modal.ticket-modal .ticket { margin: 18px auto 0; width: 100%; }
+.modal.ticket-modal .ticket { margin: 18px auto 0; width: 100%; display: block; }
 .modal.ticket-modal .dim { margin-top: 4px; }
 .modal-actions {
   display: flex;
@@ -422,12 +422,40 @@ table.table { width: 100%; border-collapse: collapse; min-width: 720px; }
   .row2 { grid-template-columns: 1fr; }
   .topbar { flex-direction: column; text-align: center; }
   .card { padding: 20px; }
-  .ticket { width: 100%; }
-  .ticket-body { flex-direction: column; text-align: center; }
-  .ticket-detail { width: 100%; }
-  .qr { width: 170px; height: 170px; }
   .counts { width: 100%; justify-content: space-between; }
   .counts div { flex: 1; }
   .searchbox input { width: 100%; }
   .adminbar { flex-direction: column; align-items: stretch; }
+
+  /* Ticket popup modal — mobile friendly */
+  .modal-ov { padding: 12px; align-items: flex-start; overflow-y: auto; }
+  .modal { padding: 18px; border-radius: 16px; }
+  .modal.ticket-modal { width: 100%; max-width: 440px; margin: 0 auto; }
+  .modal .close { top: 8px; right: 10px; font-size: 1.2rem; }
+  .modal h3 { font-size: 1.05rem; }
+  .modal.ticket-modal .ticket { margin: 16px auto 0; }
+
+  .ticket-head { padding: 16px 16px 12px; }
+  .ticket-body { flex-direction: column; gap: 14px; padding: 16px; text-align: center; }
+  .ticket-detail { width: 100%; }
+  .qr { width: 150px; height: 150px; }
+  .ticket-foot { padding: 10px 16px 14px; font-size: 0.55rem; gap: 8px; }
+  .ticket-brand { font-size: 1.25rem; }
+  .ticket-brand small { font-size: 0.52rem; letter-spacing: 2px; }
+  .ticket-type { font-size: 0.5rem; padding: 3px 8px; }
+  .tgline .k { font-size: 0.52rem; }
+  .tgline .v { font-size: 0.9rem; }
+  .ticket-id { font-size: 0.72rem; }
+
+  .modal.ticket-modal .ticket::after { display: none; }
+
+  .modal-actions { margin-top: 18px; display: grid; grid-template-columns: 1fr; width: 100%; }
+  .modal-actions .btn { width: 100%; }
+
+  #scannerBox video { border-radius: 12px; }
+}
+
+@media (max-width: 380px) {
+  .qr { width: 128px; height: 128px; }
+  .ticket-body { gap: 12px; }
 }
