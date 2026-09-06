@@ -1,0 +1,13 @@
+{
+  "name": "lumira26-functions",
+  "description": "LUMIRA '26 - sends ticket e-mails via Brevo SMTP (nodemailer)",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-functions": "^6.3.2",
+    "nodemailer": "^6.10.0"
+  },
+  "private": true
+}

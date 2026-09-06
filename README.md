@@ -9,7 +9,7 @@ A premium black & gold web app for **Lumbini College 2026 A/L Batch**'s **LUMIRA
 - 🗄 **Firestore storage** — every entry is saved live to your Firebase project.
 - 🪟 **Ticket popup** — a ticket modal appears instantly on submit with QR + details.
 - 📄 **PDF download & e-mail** — generates the official LUMIRA ticket on the **`01` background template** in high resolution: the guest's QR fills the template's white QR box (92%) and the full name is stamped below it in premium gold; lossless PNG background + vector text = zero compression artifacts, downloadable as PDF and e-mailable.
-- 📧 **Auto e-mail** — if an email is entered, the ticket is sent automatically via the **Brevo HTTP API** (no third-party relay). A size-aware attachment picks the full-quality PDF when it fits (~4.5 MB budget); otherwise it falls back to a **high-resolution (2× Retina) lossless PNG** of the same ticket, so the QR is always large and sharp.
+- 📧 **Auto e-mail** — if an email is entered, the ticket is sent automatically via a **Firebase Cloud Function** (nodemailer + Brevo SMTP; password kept in **Firebase Secret Manager**, none in client code). Size-aware attachments: full-quality **PDF + PNG**, or just the PDF when the payload would be too heavy.
 - 🔐 **Admin dashboard** — lists all registrations with live status, counts, search, scan timestamps, **Download** & **Delete** actions.
 - 📷 **QR scanner** — scanning a QR **automatically** marks the ticket as scanned (Done popup, auto-dismisses ~1s) or warns **Already Scanned** on repeat scans.
 
@@ -23,7 +23,7 @@ A premium black & gold web app for **Lumbini College 2026 A/L Batch**'s **LUMIRA
 └── js/
     ├── config.js     # Firebase config
     ├── common.js     # Shared helpers (toasts, particles, numeric uid, QR + template PDF builder)
-    ├── email.js      # Brevo e-mail delivery config
+    ├── email.js      # client → Cloud Function e-mail delivery
     ├── register.js   # Registration + QR + PDF + email logic
     └── admin.js      # Dashboard table, download/delete + auto scanner logic
 ```
@@ -58,17 +58,26 @@ service cloud.firestore {
 
 > ⚠️ For a production event, tighten these rules and add authentication (e.g., only admins may read/scan).
 
-## Automated e-mail (Brevo HTTP API)
+## Automated e-mail (Firebase Cloud Function + Brevo SMTP)
 
-The app sends emails straight from the browser to **api.brevo.com/v3/smtp/email** using a Brevo **Transactional API key** (`xkeysib-…`). No third-party SMTP relay is needed — Brevo allows CORS for GitHub Pages origins.
+The ticket is built in the browser (PDF + PNG) and POSTed to a **Firebase Cloud Function** (`functions/index.js`), which forwards it via **Brevo SMTP** using **nodemailer**. The SMTP password (Brevo API key) lives in **Firebase Secret Manager** — it never appears in client-side JS or in this repo, so there are no CORS/IP-whitelist problems and no secrets to leak.
+
+Deploy once (needs Firebase **Blaze plan** for Cloud Functions):
+
+```bash
+npm install -g firebase-tools        # if not installed
+firebase login
+cd functions && npm install && cd ..  # install firebase-functions + nodemailer
+firebase functions:secrets:set SMTP_PASS   # paste the Brevo API key when prompted
+firebase deploy --only functions:sendTicketEmail
+```
 
 1. Create a free account at **https://brevo.com**.
-2. Verify your **sender identity** (Settings → Senders & IPs) and put that address into `js/email.js` → `EMAIL_CONFIG.SENDER.email`.
-3. Create an **API key** (Settings → SMTP & API → API keys → "Create a key") and paste it into `js/email.js` → `EMAIL_CONFIG.API_KEY`.
-4. Done — when a visitor enters an email, the ticket is attached and sent automatically (PDF preferred; auto-PNG fallback if the payload would be too heavy).
+2. Verify your **sender identity** (Brevo → Settings → Senders & IPs) and confirm the account's **SMTP login** equals `SMTP_LOGIN` and sender equals `FROM_EMAIL` in `functions/index.js` (default: `pahanwelivita@gmail.com`).
+3. Keep the API key as the SMTP password — stored in the `SMTP_PASS` secret.
+4. When a visitor enters an e-mail, the ticket is attached and sent automatically (PDF + PNG; size-aware — only the PDF is attached if the combined payload would exceed the budget).
 
-> ⚠️ Credentials in client-side JS are visible to anyone who inspects the page — inherent to a serverless GitHub Pages app. Don't reuse a key you can't rotate; tighten as needed for a production event.
-> If the API key is missing, the app still works — it just skips the e-mail and shows a notice.
+> ⚠️ The HTTPS endpoint is public (the registration form is public too). If the app ever needs hardening, gate it behind Firebase App Check or an auth token.
 
 ## Usage
 
