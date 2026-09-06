@@ -17,7 +17,7 @@
 // inspects the page — inherent to a serverless GitHub Pages app.
 
 const EMAIL_CONFIG = {
-  API_KEY: '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',
+  API_KEY: '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',
   API_URL: 'https://api.brevo.com/v3/smtp/email',
   SENDER: {
     name: 'LUMIRA \'26',
