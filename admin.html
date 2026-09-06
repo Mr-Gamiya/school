@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LUMIRA '26 | Admin Dashboard</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="particles" id="particles"></div>
+
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand">LUMIRA <em>'26</em>
+        <small>Lumbini College · Admin Console</small>
+      </div>
+      <nav class="navlinks">
+        <a href="index.html">Register</a>
+        <a href="admin.html" class="active">Dashboard</a>
+      </nav>
+    </header>
+
+    <section class="card animate-in">
+      <div class="adminbar">
+        <div>
+          <span class="goldpill">Admin Control</span>
+          <h2>Registrations &amp; Scanner</h2>
+        </div>
+        <div class="counts">
+          <div><b id="countTotal">0</b><span>Total</span></div>
+          <div><b id="countActive" style="color:var(--green)">0</b><span>Active</span></div>
+          <div><b id="countScanned" style="color:var(--red)">0</b><span>Scanned</span></div>
+        </div>
+      </div>
+
+      <div class="adminbar" style="margin-bottom:16px">
+        <div class="searchbox">
+          <input type="text" id="searchInput" placeholder="Search by name, UID, class, email…" />
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn small outline" id="scanBtn">📷 Scan QR Code</button>
+          <button class="btn small" id="exportBtn">⬇ Export CSV</button>
+        </div>
+      </div>
+
+      <div id="loading" class="centerbox"><div class="spinner"></div><p class="dim">Loading registrations…</p></div>
+
+      <div class="tablewrap" id="tableWrap" style="display:none">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Ticket</th>
+              <th>Name</th>
+              <th>Class</th>
+              <th>Contact</th>
+              <th>Status</th>
+              <th>Scanned At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyState" class="empty" style="display:none">
+        <div class="big">🎟</div>
+        <p>No registrations yet. Share the registration page to get started.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- Scanner modal -->
+  <div class="modal-ov" id="scannerModal">
+    <div class="modal">
+      <button class="close" id="closeModal">✕</button>
+      <h3>QR Scanner</h3>
+      <p class="dim" style="font-size:.85rem; margin-bottom:14px">Point the camera at a LUMIRA ticket QR code.</p>
+      <div id="scannerBox"></div>
+      <div id="scanResult">
+        <div id="manualWrap" style="margin-top:14px; display:flex; gap:8px">
+          <input type="text" id="manualId" placeholder="Or paste / type Ticket ID…" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--line); background:rgba(10,10,10,.5); color:var(--text)" />
+          <button class="btn small" id="manualScanBtn">Scan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

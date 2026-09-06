@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LUMIRA '26 | Register</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="particles" id="particles"></div>
+
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand">LUMIRA <em>'26</em>
+        <small>Lumbini College · 2026 A/L Batch · VIP Pass</small>
+      </div>
+      <nav class="navlinks">
+        <a href="index.html" class="active">Register</a>
+        <a href="admin.html">Dashboard</a>
+      </nav>
+    </header>
+
+    <section class="card animate-in" style="animation-delay:.05s">
+      <span class="goldpill">VIP Registration</span>
+      <h2>Reserve your LUMIRA '26 Pass</h2>
+      <p class="sub">Fill in your details to generate a personalized VIP ticket with a scannable QR code.</p>
+
+      <form id="regForm">
+        <div class="row2">
+          <div class="field">
+            <label>Full Name *</label>
+            <input type="text" id="fName" placeholder="e.g. Pahan Perera" required />
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="fEmail" placeholder="you@example.com" />
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Class / Stream</label>
+            <input type="text" id="fClass" placeholder="e.g. 12 Science B" />
+          </div>
+          <div class="field">
+            <label>Phone</label>
+            <input type="tel" id="fPhone" placeholder="+94 7X XXX XXXX" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Additional Notes</label>
+          <textarea id="fNotes" rows="2" placeholder="Anything else (optional)"></textarea>
+        </div>
+        <button type="submit" class="btn block" id="submitBtn">Generate My VIP Ticket ✦</button>
+      </form>
+    </section>
+
+    <section id="resultArea" style="display:none">
+      <div class="ticket-wrap">
+        <div id="ticketCard" class="ticket">
+          <div class="ticket-head">
+            <div class="ticket-brand">LUMIRA <em>'26</em>
+              <small>VIP PASS · SCAN TO ENTER</small>
+            </div>
+            <div class="ticket-type">VIP</div>
+          </div>
+          <div class="ticket-body">
+            <div class="qr" id="qrBox"></div>
+            <div class="ticket-detail">
+              <div class="tgline"><div class="k">Name</div><div class="v" id="tName">—</div></div>
+              <div class="tgline"><div class="k">Class</div><div class="v" id="tClass">—</div></div>
+              <div class="tgline"><div class="k">Ticket ID</div>
+                <span class="ticket-id" id="tId">—</span>
+              </div>
+              <div class="tgline">
+                <span class="status-chip status-active">Active</span>
+              </div>
+            </div>
+          </div>
+          <div class="ticket-foot">
+            <span>LUMIRA '26</span>
+            <span id="tDate">—</span>
+          </div>
+        </div>
+        <div style="margin-top:20px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap">
+          <button class="btn" id="downloadPdfBtn">Download Ticket (PDF)</button>
+          <button class="btn outline" id="newBtn">New Registration</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/register.js"></script>
+</body>
+</html>
