@@ -62,84 +62,104 @@ function makeQrDataUrl(text, size) {
   });
 }
 
-// ---- Build the branded ticket PDF (returns jsPDF instance) ----
-function buildTicketPdf(data, qrDataUrl, scanned) {
+// ---- Ticket design template (background image "01.png") ----
+// Canvas 1774 x 887 px (2:1) → printed at 210 x 105 mm (scale = 210/1774 mm per px).
+const TICKET_TEMPLATE = {
+  src: '01.png',
+  wPx: 1774,
+  hPx: 887,
+  outW: 210,
+  outH: 105,
+  // White QR placeholder box on the right side of the template (px on 1774x887)
+  qrBox: { x: 1338, y: 238, w: 305, h: 298 },
+  qrFill: 0.86, // QR fills 86% of the box (leaves quiet-zone margin)
+  // Ticket-holder details go in the flat area below the QR box (px)
+  holderOnly: true,
+  name:  { cx: 1464, y: 718 },
+  sub:   { cx: 1464, y: 732 },
+  id:    { cx: 1464, y: 746 },
+  // Small status stamp above the QR box (used for admin re-downloads)
+  status: { cx: 1490, y: 150 }
+};
+
+let _tplImg = null;
+function loadTemplateImage() {
+  if (_tplImg) return _tplImg;
+  _tplImg = (async () => {
+    let blob = null;
+    try {
+      const res = await fetch(TICKET_TEMPLATE.src);
+      if (res.ok) blob = await res.blob();
+    } catch (e) { /* offline/file:// — fall through to <img> fallback */ }
+
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      try {
+        const img = new Image();
+        await new Promise((ok, bad) => { img.onload = ok; img.onerror = bad; img.src = url; });
+        return img;
+      } finally { URL.revokeObjectURL(url); }
+    }
+    const img = new Image();
+    await new Promise((ok, bad) => { img.onload = ok; img.onerror = bad; img.src = TICKET_TEMPLATE.src; });
+    return img;
+  })();
+  _tplImg.catch(() => { _tplImg = null; });
+  return _tplImg;
+}
+
+// ---- Build the template-based ticket PDF (async, returns jsPDF instance) ----
+// Overlays the unique guest QR code precisely inside the white placeholder box
+// of the "01" background and stamps the ticket-holder details.
+async function buildTicketPdf(data, qrDataUrl, scanned, withStatus) {
   if (typeof window.jspdf === 'undefined') throw new Error('jsPDF library not loaded');
+
+  const img = await loadTemplateImage();
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  canvas.getContext('2d').drawImage(img, 0, 0);
+  const bg = canvas.toDataURL('image/jpeg', 0.92);
+
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const T = TICKET_TEMPLATE;
+  const s = T.outW / T.wPx; // mm per template pixel
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [T.outW, T.outH] });
 
-  const margin = 15;
-  const w = 210 - margin * 2;
-  const h = 297 - margin * 2;
+  // Full-bleed template background
+  pdf.addImage(bg, 'JPEG', 0, 0, T.outW, T.outH);
 
-  // Card background
-  pdf.setFillColor(10, 10, 10);
-  pdf.rect(0, 0, 210, 297, 'F');
-
-  // Gold border frame
-  pdf.setDrawColor(212, 175, 55);
-  pdf.setLineWidth(0.8);
-  pdf.rect(margin, margin, w, h);
-  pdf.setLineWidth(0.3);
-  pdf.rect(margin + 3, margin + 3, w - 6, h - 6);
-
-  // Branding
-  pdf.setTextColor(212, 175, 55);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(30);
-  pdf.text('LUMIRA', 105, 40, { align: 'center' });
-  pdf.setFontSize(18);
-  pdf.setTextColor(240, 212, 122);
-  pdf.text('\'26 — ENTRY PASS', 105, 48, { align: 'center' });
-
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(168, 159, 138);
-  pdf.text('Lumbini College · 2026 A/L Batch', 105, 56, { align: 'center' });
-
-  // Person details
-  pdf.setFontSize(12);
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Name', 22, 80);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(15);
-  pdf.text(data.name || '—', 22, 87);
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
-  pdf.setTextColor(212, 175, 55);
-  pdf.text('Ticket ID:  ' + (data.uid || data.id), 22, 100);
-
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(11);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text('Class / Stream:  ' + (data.cls || '—'), 22, 110);
-  pdf.text('Phone:  ' + (data.phone || '—'), 22, 117);
-  if (data.email) pdf.text('Email:  ' + data.email, 22, 124);
-
-  // QR code
+  // QR code → precisely centred inside the template's white placeholder box
   if (qrDataUrl) {
-    const qrSize = 55;
-    pdf.addImage(qrDataUrl, 'PNG', 105 - qrSize / 2, 138, qrSize, qrSize);
+    const b = T.qrBox;
+    const q = Math.min(b.w, b.h) * T.qrFill;
+    const qx = (b.x + (b.w - q) / 2) * s;
+    const qy = (b.y + (b.h - q) / 2) * s;
+    pdf.addImage(qrDataUrl, 'PNG', qx, qy, q * s, q * s);
   }
 
-  // Status
-  const isScanned = !!scanned;
-  pdf.setFontSize(10);
+  // Ticket-holder details (flat area below the QR box)
   pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(isScanned ? 231 : 46, isScanned ? 76 : 204, isScanned ? 60 : 113);
-  pdf.text(isScanned ? '● STATUS: ALREADY SCANNED' : '● STATUS: ACTIVE', 105, 205, { align: 'center' });
-
-  // Footer
-  pdf.setDrawColor(212, 175, 55);
-  pdf.setLineWidth(0.3);
-  pdf.line(margin + 3, 245, 210 - margin - 3, 245);
-  pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8);
-  pdf.setTextColor(168, 159, 138);
-  pdf.text('Present this ticket at the entrance to be scanned for entry.', 105, 252, { align: 'center' });
-  pdf.text('LUMIRA \'26 · Lumbini College · 2026', 105, 258, { align: 'center' });
+  pdf.setTextColor(255, 255, 255);
+  pdf.text(String(data.name || '—'), T.name.cx * s, T.name.y * s, { align: 'center' });
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(4);
+  pdf.setTextColor(224, 198, 122);
+  pdf.text([data.cls || '', data.phone || ''].filter(Boolean).join('   ·   '), T.sub.cx * s, T.sub.y * s, { align: 'center' });
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(4.5);
+  pdf.setTextColor(212, 175, 55);
+  pdf.text('TICKET ' + (data.uid || data.id), T.id.cx * s, T.id.y * s, { align: 'center' });
+
+  // Optional status stamp (admin re-downloads)
+  if (withStatus && typeof scanned === 'boolean') {
+    pdf.setFontSize(4);
+    pdf.setTextColor(scanned ? 231 : 46, scanned ? 76 : 204, scanned ? 60 : 113);
+    pdf.text(scanned ? 'ALREADY SCANNED' : 'STATUS: ACTIVE', T.status.cx * s, T.status.y * s, { align: 'center' });
+  }
 
   return pdf;
 }

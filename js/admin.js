@@ -82,7 +82,7 @@ window.downloadTicket = async function (id) {
     if (!doc.exists) { toast('Ticket not found.', 'bad'); return; }
     const data = { id: doc.id, ...doc.data() };
     const qrDataUrl = await makeQrDataUrl(id, 260);
-    const pdf = buildTicketPdf(data, qrDataUrl, !!data.scanned);
+    const pdf = await buildTicketPdf(data, qrDataUrl, !!data.scanned, true);
     pdf.save((data.uid || id) + '.pdf');
     toast('Ticket PDF downloaded.', 'good');
   } catch (err) {

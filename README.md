@@ -8,7 +8,7 @@ A premium black & gold web app for **Lumbini College 2026 A/L Batch**'s **LUMIRA
 - 🔳 **QR generation** — each submission gets a personalized QR code (rendered in-browser as a clean image in the modal).
 - 🗄 **Firestore storage** — every entry is saved live to your Firebase project.
 - 🪟 **Ticket popup** — a ticket modal appears instantly on submit with QR + details.
-- 📄 **PDF download** — the ticket/QR is downloadable strictly as a branded PDF.
+- 📄 **PDF download & e-mail** — generates the official LUMIRA ticket on the **`01` background template**, placing each guest's unique QR precisely inside the template's white QR placeholder box and stamping holder details; downloadable as PDF and e-mailable.
 - 📧 **Auto e-mail** — if an email is entered, the ticket PDF is attached and sent automatically via the **Brevo SMTP relay** (SMTP.js).
 - 🔐 **Admin dashboard** — lists all registrations with live status, counts, search, scan timestamps, **Download** & **Delete** actions.
 - 📷 **QR scanner** — scanning a QR **automatically** marks the ticket as scanned (Done popup, auto-dismisses ~1s) or warns **Already Scanned** on repeat scans.
@@ -18,14 +18,17 @@ A premium black & gold web app for **Lumbini College 2026 A/L Batch**'s **LUMIRA
 ```
 ├── index.html        # Registration form + ticket popup modal
 ├── admin.html        # Dashboard + scanner
+├── 01.png            # Official ticket background template (1774x887, used for PDFs)
 ├── css/style.css     # Black & gold premium theme
 └── js/
     ├── config.js     # Firebase config
-    ├── common.js     # Shared helpers (toasts, particles, numeric uid, QR + PDF builders)
+    ├── common.js     # Shared helpers (toasts, particles, numeric uid, QR + template PDF builder)
     ├── email.js      # Brevo e-mail delivery config
     ├── register.js   # Registration + QR + PDF + email logic
     └── admin.js      # Dashboard table, download/delete + auto scanner logic
 ```
+
+> 🎫 **How the ticket PDF is built** — `buildTicketPdf` (in `common.js`) loads `01.png` as the full-bleed background on a 210×105 mm page, places the guest's QR inside the white placeholder box (template coords `1338,238` → size `305×298` px; QR fills 86%), and stamps name / class·phone / ticket ID in the flat band below the box. The registration **modal stays lightweight** (no template image) — only the downloaded/e-mailed PDF uses the template.
 
 ## Deploy to GitHub Pages
 

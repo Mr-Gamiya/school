@@ -83,7 +83,7 @@ form.addEventListener('submit', async (e) => {
   // 5) If an email was provided, send the ticket PDF automatically
   if (email) {
     try {
-      const pdf = buildTicketPdf(data, currentQr, false);
+      const pdf = await buildTicketPdf(data, currentQr, false);
       const result = await sendTicketEmail(email, name, id, pdf);
       if (result.ok) {
         toast('Ticket emailed to ' + email, 'good');
@@ -110,10 +110,10 @@ document.getElementById('ticketModal').addEventListener('click', (e) => {
 });
 
 // ---- Download ticket as PDF ----
-document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+document.getElementById('downloadPdfBtn').addEventListener('click', async () => {
   if (!currentTicket) return;
   try {
-    const pdf = buildTicketPdf(currentTicket, currentQr, false);
+    const pdf = await buildTicketPdf(currentTicket, currentQr, false);
     pdf.save(currentTicket.uid + '.pdf');
   } catch (err) {
     console.error('PDF build failed:', err);
