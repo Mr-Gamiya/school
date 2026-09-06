@@ -30,7 +30,7 @@ function render() {
   const filtered = allDocs.filter((d) => {
     if (!searchTerm) return true;
     const q = searchTerm.toLowerCase();
-    return [d.name, d.uid, d.cls, d.phone, d.id]
+    return [d.name, d.uid, d.cls, d.phone, d.email, d.id]
       .some((v) => v && String(v).toLowerCase().includes(q));
   });
 
@@ -53,23 +53,19 @@ function render() {
 
   tbody.innerHTML = filtered.map((d) => {
     const when = d.scannedAt ? fmtTime(d.scannedAt) : '—';
+    const tid = d.uid || d.id;
     return `<tr>
-      <td><code>${escapeHtml(d.uid || d.id)}</code></td>
+      <td><code>${escapeHtml(tid)}</code></td>
       <td>${escapeHtml(d.name || '—')}</td>
       <td>${escapeHtml(d.cls || '—')}</td>
       <td><span class="status-chip ${statusClass(d.scanned)}">${statusText(d.scanned)}</span></td>
       <td style="font-size:.8rem; color:var(--text-dim)">${when}</td>
-      <td>
+      <td style="white-space:nowrap">
+        <button class="btn small" onclick="downloadTicket('${escapeHtml(d.id)}')">⬇ Download</button>
         <button class="btn small danger" onclick="deleteTicket('${escapeHtml(d.id)}')">Delete</button>
       </td>
     </tr>`;
   }).join('');
-}
-
-function escapeHtml(str) {
-  return str == null ? '' : String(str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 function fmtTime(ts) {
@@ -78,6 +74,22 @@ function fmtTime(ts) {
   if (isNaN(d)) return String(ts);
   return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
+
+// ---- Re-download a ticket as PDF ----
+window.downloadTicket = async function (id) {
+  try {
+    const doc = await db.collection(COLLECTION).doc(id).get();
+    if (!doc.exists) { toast('Ticket not found.', 'bad'); return; }
+    const data = { id: doc.id, ...doc.data() };
+    const qrDataUrl = await makeQrDataUrl(id, 260);
+    const pdf = buildTicketPdf(data, qrDataUrl, !!data.scanned);
+    pdf.save((data.uid || id) + '.pdf');
+    toast('Ticket PDF downloaded.', 'good');
+  } catch (err) {
+    console.error('Download failed:', err);
+    toast('Could not download this ticket.', 'bad');
+  }
+};
 
 // ---- Delete a ticket ----
 window.deleteTicket = async function (id) {
@@ -100,7 +112,7 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
 
 // ---------- Scanner ----------
 let html5Qr = null;
-let scanning = false;
+let cameraReady = false;
 
 const modal = document.getElementById('scannerModal');
 document.getElementById('scanBtn').addEventListener('click', openScanner);
@@ -108,22 +120,44 @@ document.getElementById('closeModal').addEventListener('click', closeScanner);
 modal.addEventListener('click', (e) => { if (e.target === modal) closeScanner(); });
 
 function openScanner() {
+  cameraReady = true;
   modal.classList.add('open');
-  document.getElementById('scanResult').innerHTML = '<p class="dim" style="text-align:center; margin-top:14px">Scanning…</p>';
+  document.getElementById('scanResult').innerHTML = '<p class="dim" style="text-align:center">Scanning…</p>';
   startScanner();
 }
 
 function closeScanner() {
   modal.classList.remove('open');
+  stopScanner();
+}
+
+function stopScanner() {
+  cameraReady = false;
   if (html5Qr) {
-    try { html5Qr.stop().catch(() => {}); } catch (e) {}
+    try {
+      if (html5Qr.isScanning) html5Qr.stop().catch(() => {});
+    } catch (e) {}
     html5Qr = null;
   }
-  scanning = false;
+}
+
+function pauseScanner() {
+  if (html5Qr) {
+    try {
+      if (html5Qr.isScanning) html5Qr.pause().catch(() => {});
+    } catch (e) {}
+  }
+}
+
+function resumeScanner() {
+  if (html5Qr && cameraReady) {
+    try {
+      if (html5Qr.isPaused) html5Qr.resume().catch(() => {});
+    } catch (e) {}
+  }
 }
 
 function startScanner() {
-  scanning = true;
   if (typeof Html5Qrcode === 'undefined') {
     document.getElementById('scanResult').innerHTML = '<p class="dim">Scanner library failed to load.</p>';
     return;
@@ -132,9 +166,7 @@ function startScanner() {
   html5Qr.start(
     { facingMode: 'environment' },
     { fps: 10, qrbox: { width: 220, height: 220 } },
-    (decoded) => {
-      handleScan(decoded.trim());
-    },
+    (decoded) => { handleCode(decoded.trim()); },
     () => {}
   ).catch((err) => {
     console.error(err);
@@ -143,71 +175,69 @@ function startScanner() {
   });
 }
 
+// Manual entry stays available even without a camera
 document.getElementById('manualScanBtn').addEventListener('click', () => {
   const id = document.getElementById('manualId').value.trim();
   if (!id) { toast('Enter a ticket ID', 'bad'); return; }
-  handleScan(id);
+  handleCode(id);
   document.getElementById('manualId').value = '';
 });
+document.getElementById('manualId').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('manualScanBtn').click();
+});
 
-async function handleScan(value) {
-  if (!scanning) { await validateTicket(value); return; }
-  scanning = false;
-  // Pause scanner while validating to avoid loop
-  if (html5Qr) {
-    try { await html5Qr.pause(); } catch (e) {}
-  }
-  await validateTicket(value);
-}
-
-async function validateTicket(value) {
+// ---------- Automatic scan handling ----------
+async function handleCode(value) {
+  pauseScanner();
   const res = document.getElementById('scanResult');
+
   try {
-    const doc = await db.collection(COLLECTION).doc(value).get();
+    const ref = db.collection(COLLECTION).doc(value);
+    const doc = await ref.get();
+
     if (!doc.exists) {
-      res.innerHTML = `<div class="card" style="padding:16px; text-align:center; border-color:rgba(231,76,60,.5); background:rgba(231,76,60,.08)">
-        <h3 style="color:var(--red)">NOT FOUND</h3>
-        <p class="dim" style="margin-top:6px"><code>${escapeHtml(value)}</code> is not registered.</p>
-      </div>`;
-      toast('Ticket not found!', 'bad');
+      res.innerHTML = scanCard('Not Found', value, 'This ticket ID is not registered.', 'rgba(231,76,60,.5)', 'rgba(231,76,60,.12)', 'var(--red)');
+      autoDismiss(res, 1500);
       return;
     }
-    const data = doc.data();
-    const status = data.scanned ? 'Already Scanned' : 'Active';
-    res.innerHTML = `<div class="card" style="padding:18px; text-align:center; border-color:${data.scanned ? 'rgba(231,76,60,.5)' : 'rgba(46,204,113,.5)'}; background:rgba(24,24,24,.6)">
-      <h3 style="margin-bottom:4px; color:#fff">${escapeHtml(data.name || '—')}</h3>
-      <p class="dim" style="font-size:.85rem">${escapeHtml(data.cls || '')}</p>
-      <p style="margin:10px 0"><code style="color:var(--gold)">${escapeHtml(data.uid || value)}</code></p>
-      <span class="status-chip ${statusClass(data.scanned)}">${status}</span>
-      <div style="margin-top:14px">
-        <button class="btn small" id="markScannedBtn" ${data.scanned ? 'disabled' : ''}>Mark as Scanned</button>
-        <button class="btn small outline" onclick="closeScanner()">Done</button>
-      </div>
-    </div>`;
 
-    const markBtn = document.getElementById('markScannedBtn');
-    if (markBtn) {
-      markBtn.addEventListener('click', async () => {
-        try {
-          if (data.scanned) return;
-          await db.collection(COLLECTION).doc(value).update({
-            scanned: true,
-            // Record the scan timestamp
-            scannedAt: new Date().toISOString()
-          });
-          toast('Entry validated & marked scanned!', 'good');
-          data.scanned = true;
-          res.querySelector('.status-chip').className = 'status-chip ' + statusClass(true);
-          res.querySelector('.status-chip').textContent = statusText(true);
-          markBtn.disabled = true;
-        } catch (e) {
-          console.error(e);
-          toast('Failed to update status.', 'bad');
-        }
-      });
+    const data = doc.data();
+
+    if (data.scanned) {
+      // Already scanned → warning popup, no update
+      res.innerHTML = scanCard('Already Scanned', value, (data.name || '—') + ' has already entered.',
+        'rgba(231,76,60,.5)', 'rgba(231,76,60,.12)', 'var(--red)');
+      autoDismiss(res, 1500);
+      return;
     }
-  } catch (e) {
-    console.error(e);
-    res.innerHTML = '<p class="dim" style="text-align:center">Could not validate. Check Firestore rules.</p>';
+
+    // First scan → auto mark as scanned + timestamp, then "Done" popup
+    await ref.update({
+      scanned: true,
+      scannedAt: new Date().toISOString()
+    });
+    res.innerHTML = scanCard('Done', value, (data.name || '—') + ' — entry confirmed.',
+      'rgba(46,204,113,.5)', 'rgba(46,204,113,.12)', 'var(--green)');
+    autoDismiss(res, 1000);
+  } catch (err) {
+    console.error('Scan validation failed:', err);
+    res.innerHTML = '<p class="dim" style="text-align:center">Could not validate. Check Firestore rules / network.</p>';
   }
+}
+
+function scanCard(title, ticketId, message, border, bg, color) {
+  return `<div class="card" style="padding:18px; text-align:center; border-color:${border}; background:${bg}; animation:fadeUp .25s ease">
+    <h3 style="color:${color}; margin-bottom:6px">${escapeHtml(title)}</h3>
+    <p style="margin:4px 0"><code style="color:var(--gold)">${escapeHtml(ticketId)}</code></p>
+    <p class="dim" style="font-size:.88rem; margin:0">${escapeHtml(message)}</p>
+  </div>`;
+}
+
+// Auto-hide popup then keep scanning for the next ticket
+function autoDismiss(res, ms) {
+  clearTimeout(autoDismiss._t);
+  autoDismiss._t = setTimeout(() => {
+    res.innerHTML = '<p class="dim" style="text-align:center">Scanning…</p>';
+    resumeScanner();
+  }, ms);
 }

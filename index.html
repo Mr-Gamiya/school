@@ -40,6 +40,10 @@
           </div>
         </div>
         <div class="field">
+          <label>Email (Optional — ticket sent to this address)</label>
+          <input type="email" id="fEmail" placeholder="you@example.com" />
+        </div>
+        <div class="field">
           <label>Additional Notes</label>
           <textarea id="fNotes" rows="2" placeholder="Anything else (optional)"></textarea>
         </div>
@@ -81,7 +85,6 @@
 
       <div class="modal-actions">
         <button class="btn" id="downloadPdfBtn">Download Ticket (PDF)</button>
-        <button class="btn outline" id="downloadQrBtn">Download QR (PNG)</button>
       </div>
     </div>
   </div>
@@ -93,6 +96,7 @@
 
   <script src="js/config.js"></script>
   <script src="js/common.js"></script>
+  <script src="js/email.js"></script>
   <script src="js/register.js"></script>
 </body>
 </html>

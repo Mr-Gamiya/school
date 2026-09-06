@@ -51,7 +51,7 @@
               <th>Class</th>
               <th>Status</th>
               <th>Scanned At</th>
-              <th>Action</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody id="tableBody"></tbody>
@@ -71,17 +71,18 @@
       <h3>QR Scanner</h3>
       <p class="dim" style="font-size:.85rem; margin-bottom:14px">Point the camera at a LUMIRA ticket QR code.</p>
       <div id="scannerBox"></div>
-      <div id="scanResult">
-        <div id="manualWrap" style="margin-top:14px; display:flex; gap:8px">
-          <input type="text" id="manualId" placeholder="Or paste / type Ticket ID…" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--line); background:rgba(10,10,10,.5); color:var(--text)" />
-          <button class="btn small" id="manualScanBtn">Scan</button>
-        </div>
+      <div id="scanResult"></div>
+      <div id="manualWrap" style="margin-top:14px; display:flex; gap:8px">
+        <input type="text" id="manualId" placeholder="Or paste / type Ticket ID…" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--line); background:rgba(10,10,10,.5); color:var(--text)" />
+        <button class="btn small" id="manualScanBtn">Scan</button>
       </div>
     </div>
   </div>
 
   <script src="js/vendor/firebase-app-compat.js"></script>
   <script src="js/vendor/firebase-firestore-compat.js"></script>
+  <script src="js/vendor/qrcode.min.js"></script>
+  <script src="js/vendor/jspdf.umd.min.js"></script>
   <script src="js/vendor/html5-qrcode.min.js"></script>
 
   <script src="js/config.js"></script>
