@@ -37,9 +37,21 @@ form.addEventListener('submit', async (e) => {
 
   try {
     await db.collection(COLLECTION).doc(id).set(data);
-    currentTicket = data;
+  } catch (err) {
+    console.error('Firestore save failed:', err);
+    const msg = err && err.code === 'permission-denied'
+      ? 'Firebase rules are blocking saves. Update Firestore rules to allow write on "registrations".'
+      : 'Could not save to Firestore. Check your internet connection and try again.';
+    toast(msg, 'bad');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Generate My Ticket ✦';
+    return;
+  }
+  currentTicket = data;
 
-    // Render QR code
+  // Render QR code
+  try {
+    if (typeof QRCode === 'undefined') throw new Error('QRCode library not loaded');
     const qrBox = document.getElementById('qrBox');
     qrBox.innerHTML = '';
     qrCanvas = await QRCode.toCanvas(document.createElement('canvas'), id, {
@@ -48,27 +60,27 @@ form.addEventListener('submit', async (e) => {
       color: { dark: '#000000', light: '#ffffff' }
     });
     qrBox.appendChild(qrCanvas);
+  } catch (err) {
+    console.error('QR render failed:', err);
+    toast('QR code library failed to load — please refresh the page.', 'bad');
+  }
 
     // Fill ticket details
-    document.getElementById('tName').textContent = name || '—';
-    document.getElementById('tClass').textContent = cls || '—';
-    document.getElementById('tPhone').textContent = phone || '—';
-    document.getElementById('tId').textContent = id;
-    document.getElementById('tDate').textContent = new Date().toLocaleDateString('en-GB', {
-      day: '2-digit', month: 'short', year: 'numeric'
-    });
+  document.getElementById('tName').textContent = name || '—';
+  document.getElementById('tClass').textContent = cls || '—';
+  document.getElementById('tPhone').textContent = phone || '—';
+  document.getElementById('tId').textContent = id;
+  document.getElementById('tDate').textContent = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric'
+  });
 
-    // Pop up the ticket modal
-    document.getElementById('ticketModal').classList.add('open');
-    form.reset();
-    toast('Ticket generated & saved successfully!', 'good');
-  } catch (err) {
-    console.error(err);
-    toast('Failed to save. Check your network / Firestore rules.', 'bad');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Generate My Ticket ✦';
-  }
+  // Pop up the ticket modal
+  document.getElementById('ticketModal').classList.add('open');
+  form.reset();
+  toast('Ticket generated & saved successfully!', 'good');
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Generate My Ticket ✦';
 });
 
 // ---- Ticket modal close ----
