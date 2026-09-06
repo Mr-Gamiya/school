@@ -114,25 +114,50 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
 let html5Qr = null;
 let cameraReady = false;
 
+// Continuous mode: while the just-scanned QR is still leaving the camera view it
+// keeps firing frames. Cooldown per code stops that re-trigger blocking the line.
+const SCAN_COOLDOWN_MS = 2500;
+const seenAt = new Map();
+
+function isDupFrame(code) {
+  const now = Date.now();
+  const last = seenAt.get(code) || 0;
+  if (now - last < SCAN_COOLDOWN_MS) return true;
+  seenAt.set(code, now);
+  if (seenAt.size > 40) {
+    for (const [c, t] of seenAt) if (now - t > SCAN_COOLDOWN_MS) seenAt.delete(c);
+  }
+  return false;
+}
+
 const modal = document.getElementById('scannerModal');
 document.getElementById('scanBtn').addEventListener('click', openScanner);
 document.getElementById('closeModal').addEventListener('click', closeScanner);
+document.getElementById('closeScannerBtn').addEventListener('click', closeScanner);
 modal.addEventListener('click', (e) => { if (e.target === modal) closeScanner(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modal.classList.contains('open')) closeScanner();
+});
 
 function openScanner() {
+  seenAt.clear();
   cameraReady = true;
   modal.classList.add('open');
   document.getElementById('scanResult').innerHTML = '<p class="dim" style="text-align:center">Scanning…</p>';
+  if (html5Qr) stopScanner();
   startScanner();
 }
 
 function closeScanner() {
+  clearTimeout(autoDismiss._t);
   modal.classList.remove('open');
   stopScanner();
+  document.getElementById('scanResult').innerHTML = '';
 }
 
 function stopScanner() {
   cameraReady = false;
+  seenAt.clear();
   if (html5Qr) {
     try {
       if (html5Qr.isScanning) html5Qr.stop().catch(() => {});
@@ -166,7 +191,10 @@ function startScanner() {
   html5Qr.start(
     { facingMode: 'environment' },
     { fps: 10, qrbox: { width: 220, height: 220 } },
-    (decoded) => { handleCode(decoded.trim()); },
+    (decoded) => {
+      const code = String(decoded || '').trim();
+      if (code && !isDupFrame(code)) handleCode(code);
+    },
     () => {}
   ).catch((err) => {
     console.error(err);
