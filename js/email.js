@@ -68,7 +68,12 @@ async function sendTicketEmail(recipient, name, ticketId, pdfInstance) {
         }
       ]
     });
-    return { ok: true, message: message };
+    const msg = String(message || '').trim();
+    if (!/^OK/i.test(msg)) {
+      console.warn('SMTP relay response:', msg);
+      return { ok: false, error: msg || 'SMTP relay returned an unexpected response' };
+    }
+    return { ok: true, message: msg };
   } catch (err) {
     console.error('Ticket email send failed:', err);
     return { ok: false, error: String((err && err.message) || err) };
