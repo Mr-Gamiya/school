@@ -80,11 +80,14 @@ form.addEventListener('submit', async (e) => {
   form.reset();
   toast('Ticket generated & saved successfully!', 'good');
 
-  // 5) If an email was provided, send the ticket PDF automatically
+  // 5) If an email was provided, send the ticket automatically.
+  //    Build a lightweight PDF and a PNG fallback; the sender picks whichever
+  //    fits within the relay's payload limits.
   if (email) {
     try {
-      const pdf = await buildTicketPdf(data, currentQr, false);
-      const result = await sendTicketEmail(email, name, id, pdf);
+      const pdf = await buildTicketPdf(data, currentQr, false, false, { bgScale: 0.75, jpegQuality: 0.78 });
+      const png = await buildTicketPng(data, currentQr, false, false);
+      const result = await sendTicketEmail(email, name, id, { pdf, png });
       if (result.ok) {
         toast('Ticket emailed to ' + email, 'good');
       } else {

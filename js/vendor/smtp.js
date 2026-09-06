@@ -12,10 +12,17 @@ var Email = {
   },
   ajaxPost: function (e, n, t) {
     var a = Email.createCORSRequest("POST", e);
+    a.timeout = 30000;
     a.setRequestHeader("Content-type", "application/x-www-form-urlencoded"),
       (a.onload = function () {
         var e = a.responseText;
         null != t && t(e);
+      }),
+      (a.onerror = function () {
+        null != t && t("NETWORK ERROR: could not reach the SMTP relay");
+      }),
+      (a.ontimeout = function () {
+        null != t && t("NETWORK TIMEOUT: the SMTP relay did not respond");
       }),
       a.send(n);
   },
