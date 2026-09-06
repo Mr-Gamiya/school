@@ -1,67 +1,76 @@
 // ============================================================
-// LUMIRA '26 — Ticket email delivery via Brevo (Sendinblue)
+// LUMIRA '26 — Ticket email delivery via Brevo SMTP relay
 // ============================================================
-// Brevo transactional e-mail API: https://developers.brevo.com
+// SMTP.js library (https://smtpjs.com) relays the mail to your
+// Brevo SMTP server. Credentials are read from EMAIL_CONFIG.
 //
-// 1) Create a free account at https://brevo.com
-// 2) Get your API key: Settings > API Keys
-// 3) Verify your sender e-mail address (Sender identity)
-// 4) Paste your API key below.
+// Setup:
+//   1) In Brevo > Settings > Senders & IPs, verify the sender
+//      e-mail address used below.
+//   2) Paste the verified sender e-mail into EMAIL_CONFIG.SENDER.email.
+//   3) The SMTP key below comes from Brevo > SMTP & API.
+//
+// NOTE: credentials in client-side JS are visible to anyone who
+// inspects the page — inherent to a serverless GitHub Pages app.
 
 const EMAIL_CONFIG = {
-  ENABLED: true,
-  API_KEY: 'YOUR_BREVO_API_KEY',                 // <-- paste your key here
-  SENDER: { name: 'LUMIRA \'26', email: 'your-verified-sender@example.com' },
-  SUBJECT: 'Your LUMIRA \'26 Ticket',
-  FROM_NAME: 'LUMIRA \'26'
+  HOST: 'smtp-relay.brevo.com',
+  PORT: '587',
+  USERNAME: 'b81424001@smtp-brevo.com',
+  PASSWORD: 'xsmtpsib-8204cf6846b4bbf61d9f6d2bc204b60fbc6b2a93c3b163909c42f40a6369c240-mI7wUwzenLxBzQdg',
+  SENDER: {
+    name: 'LUMIRA \'26',
+    email: 'pahanwelivita@gmail.com'            // verified Brevo sender
+  },
+  SUBJECT: 'Your LUMIRA \'26 Ticket'
 };
 
-// Sends the ticket PDF attached to the recipient's email.
-// Returns { ok, status, message }.
+// Sends the ticket PDF as an attachment via the Brevo SMTP relay.
+// Returns { ok, skipped?, error?, message? }.
 async function sendTicketEmail(recipient, name, ticketId, pdfInstance) {
-  if (!EMAIL_CONFIG.ENABLED) return { ok: false, message: 'Email feature disabled.' };
-  if (!EMAIL_CONFIG.API_KEY || EMAIL_CONFIG.API_KEY.indexOf('YOUR_') === 0) {
-    return { ok: false, message: 'Brevo API key not configured.' };
+  if (!recipient) return { ok: true, skipped: true }; // no email given — nothing to send
+
+  if (!(window.Email && typeof window.Email.send === 'function')) {
+    console.error('SMTP.js not loaded — ticket email not sent.');
+    return { ok: false, error: 'SMTP.js not loaded' };
   }
-  if (!recipient) return { ok: false, message: 'No recipient email provided.' };
+  if (!EMAIL_CONFIG.SENDER.email) {
+    console.warn('No verified sender email set in js/email.js — ticket email not sent.');
+    return { ok: false, error: 'sender address not configured' };
+  }
 
   const dataUrl = pdfInstance.output('datauristring');
-  const base64 = dataUrl.split(',')[1] || '';
+  const base64 = (dataUrl.split(',')[1] || '').replace(/\s+/g, '');
 
-  const payload = {
-    sender: { name: EMAIL_CONFIG.SENDER.name, email: EMAIL_CONFIG.SENDER.email },
-    to: [{ email: recipient, name: name || recipient }],
-    subject: EMAIL_CONFIG.SUBJECT,
-    htmlContent:
-      '<div style="font-family:Arial,Helvetica,sans-serif;background:#0a0a0a;color:#f5efe0;padding:24px;border-radius:12px">' +
+  try {
+    const message = await window.Email.send({
+      Host: EMAIL_CONFIG.HOST,
+      Port: EMAIL_CONFIG.PORT,
+      Username: EMAIL_CONFIG.USERNAME,
+      Password: EMAIL_CONFIG.PASSWORD,
+      To: recipient,
+      From: EMAIL_CONFIG.SENDER.email,
+      FromName: EMAIL_CONFIG.SENDER.name,
+      Subject: EMAIL_CONFIG.SUBJECT,
+      Body:
+        '<div style="font-family:Arial,Helvetica,sans-serif;background:#0a0a0a;color:#f5efe0;padding:24px;border-radius:12px">' +
         '<h2 style="color:#d4af37;letter-spacing:2px;margin:0 0 6px">LUMIRA &#39;26</h2>' +
         '<p style="color:#a89f8a;margin:0 0 18px;font-size:13px">ENTRY PASS &middot; Lumbini College 2026 A/L Batch</p>' +
         '<p style="margin:0 0 12px">Hi ' + escapeHtml(name || '') + ',</p>' +
         '<p style="margin:0 0 12px">Your LUMIRA &#39;26 ticket is attached as a PDF. ' +
-          'Present the QR code at the entrance for scanning.</p>' +
+        'Present it (printed or on your phone) at the entrance to be scanned.</p>' +
         '<p style="color:#a89f8a;font-size:13px;margin:0">Ticket ID: <strong style="color:#d4af37">' + escapeHtml(ticketId) + '</strong></p>' +
-      '</div>',
-    attachment: [
-      {
-        name: ticketId + '.pdf',
-        content: base64
-      }
-    ]
-  };
-
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      'api-key': EMAIL_CONFIG.API_KEY
-    },
-    body: JSON.stringify(payload)
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error('Brevo API error ' + res.status + ': ' + text);
+        '</div>',
+      Attachments: [
+        {
+          name: ticketId + '.pdf',
+          data: base64
+        }
+      ]
+    });
+    return { ok: true, message: message };
+  } catch (err) {
+    console.error('Ticket email send failed:', err);
+    return { ok: false, error: String((err && err.message) || err) };
   }
-  return { ok: true, status: res.status };
 }
