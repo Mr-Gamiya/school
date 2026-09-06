@@ -114,9 +114,12 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
 let html5Qr = null;
 let cameraReady = false;
 
-// Continuous mode: while the just-scanned QR is still leaving the camera view it
-// keeps firing frames. Cooldown per code stops that re-trigger blocking the line.
-const SCAN_COOLDOWN_MS = 2500;
+// TRUE continuous mode: the camera is NEVER paused/resumed between scans. The
+// native pause() freezes the video element and resume() waits on a "playing"
+// event, which is what made the feed freeze/get stuck. Instead we keep the
+// live stream running and simply ignore the still-visible code for a short
+// cooldown, giving seamless back-to-back scanning for a long queue.
+const SCAN_COOLDOWN_MS = 4000;
 const seenAt = new Map();
 
 function isDupFrame(code) {
@@ -166,22 +169,6 @@ function stopScanner() {
   }
 }
 
-function pauseScanner() {
-  if (html5Qr) {
-    try {
-      if (html5Qr.isScanning) html5Qr.pause().catch(() => {});
-    } catch (e) {}
-  }
-}
-
-function resumeScanner() {
-  if (html5Qr && cameraReady) {
-    try {
-      if (html5Qr.isPaused) html5Qr.resume().catch(() => {});
-    } catch (e) {}
-  }
-}
-
 function startScanner() {
   if (typeof Html5Qrcode === 'undefined') {
     document.getElementById('scanResult').innerHTML = '<p class="dim">Scanner library failed to load.</p>';
@@ -190,7 +177,7 @@ function startScanner() {
   html5Qr = new Html5Qrcode('scannerBox');
   html5Qr.start(
     { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 220, height: 220 } },
+    { fps: 15, qrbox: { width: 220, height: 220 } },
     (decoded) => {
       const code = String(decoded || '').trim();
       if (code && !isDupFrame(code)) handleCode(code);
@@ -199,24 +186,12 @@ function startScanner() {
   ).catch((err) => {
     console.error(err);
     document.getElementById('scanResult').innerHTML =
-      '<p class="dim">Could not start camera. Use the manual entry below.<br>' + escapeHtml(String(err)) + '</p>';
+      '<p class="dim">Could not start the camera. Allow camera access and try again.<br>' + escapeHtml(String(err)) + '</p>';
   });
 }
 
-// Manual entry stays available even without a camera
-document.getElementById('manualScanBtn').addEventListener('click', () => {
-  const id = document.getElementById('manualId').value.trim();
-  if (!id) { toast('Enter a ticket ID', 'bad'); return; }
-  handleCode(id);
-  document.getElementById('manualId').value = '';
-});
-document.getElementById('manualId').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('manualScanBtn').click();
-});
-
 // ---------- Automatic scan handling ----------
 async function handleCode(value) {
-  pauseScanner();
   const res = document.getElementById('scanResult');
 
   try {
@@ -232,7 +207,7 @@ async function handleCode(value) {
     const data = doc.data();
 
     if (data.scanned) {
-      // Already scanned → warning popup, no update
+      // Already scanned → brief warning, scanner keeps rolling
       res.innerHTML = scanCard('Already Scanned', value, (data.name || '—') + ' has already entered.',
         'rgba(231,76,60,.5)', 'rgba(231,76,60,.12)', 'var(--red)');
       autoDismiss(res, 1500);
@@ -250,6 +225,7 @@ async function handleCode(value) {
   } catch (err) {
     console.error('Scan validation failed:', err);
     res.innerHTML = '<p class="dim" style="text-align:center">Could not validate. Check Firestore rules / network.</p>';
+    autoDismiss(res, 1500);
   }
 }
 
@@ -261,11 +237,10 @@ function scanCard(title, ticketId, message, border, bg, color) {
   </div>`;
 }
 
-// Auto-hide popup then keep scanning for the next ticket
+// Auto-hide popup and keep scanning for the next ticket (camera untouched)
 function autoDismiss(res, ms) {
   clearTimeout(autoDismiss._t);
   autoDismiss._t = setTimeout(() => {
     res.innerHTML = '<p class="dim" style="text-align:center">Scanning…</p>';
-    resumeScanner();
   }, ms);
 }

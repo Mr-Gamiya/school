@@ -73,7 +73,7 @@ The app sends emails straight from the browser to **api.brevo.com/v3/smtp/email*
 ## Usage
 
 - **Guests** visit `index.html`, submit the form, and download/hold their ticket PDF (optionally gets it e-mailed).
-- **Admins** visit `admin.html`, use **Scan QR Code** (camera) or paste a Ticket ID. Scans are **automatic**:
+- **Admins** visit `admin.html` and use **Scan QR Code** (camera). Scanning is **fully automatic & continuous** — the camera never pauses between scans, so a queue of 150+ students can be processed back-to-back:
   - First scan → ticket marked scanned + timestamp recorded, quick **Done** popup (~1s).
   - Re-scan → **Already Scanned** warning popup.
   - Admins can **Download** any ticket PDF again or **Delete** an entry.
