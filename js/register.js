@@ -88,7 +88,7 @@ form.addEventListener('submit', async (e) => {
       if (result.ok) {
         toast('Ticket emailed to ' + email, 'good');
       } else {
-        toast(result.message, 'bad');
+        toast(result.error || 'Email could not be sent — you can download the ticket here.', 'bad');
       }
     } catch (err) {
       console.error('Email send failed:', err);

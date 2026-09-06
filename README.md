@@ -9,7 +9,7 @@ A premium black & gold web app for **Lumbini College 2026 A/L Batch**'s **LUMIRA
 - 🗄 **Firestore storage** — every entry is saved live to your Firebase project.
 - 🪟 **Ticket popup** — a ticket modal appears instantly on submit with QR + details.
 - 📄 **PDF download** — the ticket/QR is downloadable strictly as a branded PDF.
-- 📧 **Auto e-mail** — if an email is entered, the ticket PDF is sent automatically via **Brevo (Sendinblue) SMTP API**.
+- 📧 **Auto e-mail** — if an email is entered, the ticket PDF is attached and sent automatically via the **Brevo SMTP relay** (SMTP.js).
 - 🔐 **Admin dashboard** — lists all registrations with live status, counts, search, scan timestamps, **Download** & **Delete** actions.
 - 📷 **QR scanner** — scanning a QR **automatically** marks the ticket as scanned (Done popup, auto-dismisses ~1s) or warns **Already Scanned** on repeat scans.
 
@@ -55,14 +55,17 @@ service cloud.firestore {
 
 > ⚠️ For a production event, tighten these rules and add authentication (e.g., only admins may read/scan).
 
-## Automated e-mail (Brevo / Sendinblue)
+## Automated e-mail (Brevo SMTP relay)
+
+The app sends emails through [SMTP.js](https://smtpjs.com), which relays to your **Brevo SMTP** server (`smtp-relay.brevo.com:587`). Your SMTP login + SMTP key are already filled in (`js/email.js` → `EMAIL_CONFIG`).
 
 1. Create a free account at **https://brevo.com**.
 2. Verify your **sender identity** (Settings → Senders & IPs).
-3. Copy your **API key** (Settings → API Keys) into `js/email.js` → `EMAIL_CONFIG.API_KEY` and set your verified sender email in `EMAIL_CONFIG.SENDER`.
-4. That's it — when a visitor enters an email, the ticket PDF is sent automatically via Brevo's SMTP API.
+3. Paste the verified sender email into `js/email.js` → `EMAIL_CONFIG.SENDER.email`.
+4. Done — when a visitor enters an email, the ticket PDF is attached and sent automatically.
 
-> If no API key is set, the app still works — it just skips the e-mail and shows a notice.
+> ⚠️ Credentials in client-side JS are visible to anyone who inspects the page — inherent to a serverless GitHub Pages app. Don't reuse a key you can't rotate; tighten as needed for a production event.
+> If the sender email is missing, the app still works — it just skips the e-mail and shows a notice.
 
 ## Usage
 
